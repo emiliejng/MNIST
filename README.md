@@ -59,7 +59,7 @@ Setup / Local Run:
 To test the project locally:
 
 Clone this repository
-git clone https://github.com/yourusername/tinygrad-webgpu.git
+git clone https://github.com/emiliejng/MNIST.git
 cd tinygrad-webgpu
 
 Start a local server
