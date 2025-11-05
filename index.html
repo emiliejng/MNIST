@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>MNIST Tinygrad WebGPU</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              border: "hsl(214.3 31.8% 91.4%)",
+              input: "hsl(214.3 31.8% 91.4%)",
+              ring: "hsl(222.2 47.4% 11.2%)",
+              background: "hsl(0 0% 100%)",
+              foreground: "hsl(222.2 47.4% 11.2%)",
+              primary: { DEFAULT: "hsl(222.2 47.4% 11.2%)", foreground: "hsl(210 40% 98%)" },
+              secondary: { DEFAULT: "hsl(210 40% 96.1%)", foreground: "hsl(222.2 47.4% 11.2%)" },
+              muted: { DEFAULT: "hsl(210 40% 96.1%)", foreground: "hsl(215.4 16.3% 46.9%)" },
+              card: { DEFAULT: "hsl(0 0% 100%)", foreground: "hsl(222.2 47.4% 11.2%)" },
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="min-h-screen p-6 md:p-10 bg-gray-50">
+    <div class="mx-auto w-full max-w-5xl grid gap-6">
+      <!-- Header -->
+      <header class="border bg-card text-card-foreground shadow-sm rounded-xl p-6">
+        <h1 class="text-3xl font-bold tracking-tight">Digit Classifier</h1>
+        <p class="text-muted-foreground mt-1">
+          Draw a single digit (0–9) in the black square. Choose a model (MLP or CNN). The prediction and confidence update in real time.
+        </p>
+      </header>
+
+      <!-- Controls -->
+      <section class="border bg-card shadow-sm rounded-xl p-6 grid gap-4">
+        <div class="grid sm:grid-cols-3 gap-3">
+          <div class="flex gap-2 items-end">
+            <label class="text-sm font-medium">Model</label>
+            <select id="model" class="ml-auto flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+              <option value="mnist_mlp">mnist_mlp</option>
+              <option value="mnist_convnet">mnist_convnet</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="pen" class="px-3 py-2 rounded-md bg-primary text-white text-sm font-medium">Pen</button>
+            <button id="eraser" class="px-3 py-2 rounded-md bg-secondary text-sm font-medium">Eraser</button>
+            <button id="clear" class="px-3 py-2 rounded-md bg-secondary text-sm font-medium">Clear</button>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <label for="size" class="text-sm">Stroke size</label>
+            <input id="size" type="range" min="8" max="40" value="22" class="w-full" />
+            <span id="sizeVal" class="text-sm text-muted-foreground">22</span>
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <!-- Canvas & Preview -->
+          <div class="grid gap-3">
+            <div class="relative">
+              <canvas id="draw" width="256" height="256" class="rounded-lg border shadow-sm bg-black touch-none"></canvas>
+              <div class="absolute top-2 right-2 text-xs text-white/70 bg-black/40 rounded px-2 py-1">256×256</div>
+            </div>
+            <div class="flex items-center gap-4">
+              <canvas id="thumb" width="56" height="56" class="border rounded bg-white"></canvas>
+              <div class="text-sm text-muted-foreground">
+                Preview <span class="font-mono">(28×28)</span> sent to the model
+              </div>
+            </div>
+          </div>
+
+          <!-- Output -->
+          <div class="grid gap-4">
+            <div class="border rounded-lg p-4">
+              <div class="text-sm text-muted-foreground">Prediction</div>
+              <div class="text-4xl font-bold tracking-tight">
+                <span id="pred"></span>
+                <span class="text-lg text-muted-foreground"><span id="conf"></span></span>
+              </div>
+              <div id="timer" class="text-xs text-muted-foreground mt-1">—</div>
+              <div id="status" class="text-xs mt-2 text-emerald-600">Initializing…</div>
+            </div>
+
+            <div class="border rounded-lg p-4">
+              <div class="text-sm font-medium mb-2">Probabilities (Softmax)</div>
+              <div id="bars" class="grid grid-cols-10 gap-2 items-end h-40">
+                <!-- bars injected by JS -->
+              </div>
+              <div class="grid grid-cols-10 text-center text-xs text-muted-foreground mt-1">
+                <span>0</span><span>1</span><span>2</span><span>3</span><span>4</span>
+                <span>5</span><span>6</span><span>7</span><span>8</span><span>9</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+    </div>
+
+    <script type="module">
+      // ---------- UI refs ----------
+      const canvas = document.getElementById("draw");
+      const ctx = canvas.getContext("2d");
+      const thumb = document.getElementById("thumb");
+      const tctx = thumb.getContext("2d");
+      const modelSelect = document.getElementById("model");
+      const sizeInput = document.getElementById("size");
+      const sizeVal = document.getElementById("sizeVal");
+      const btnPen = document.getElementById("pen");
+      const btnEraser = document.getElementById("eraser");
+      const btnClear = document.getElementById("clear");
+
+      const predEl = document.getElementById("pred");
+      const confEl = document.getElementById("conf");
+      const timerEl = document.getElementById("timer");
+      const statusEl = document.getElementById("status");
+      const barsEl = document.getElementById("bars");
+
+      // ---------- Draw setup (black bg, white ink) ----------
+      const CANVAS_SIZE = 256;
+      const DIGIT_SIZE = 28; // model trained on 28×28
+      let brushSize = parseInt(sizeInput.value, 10);
+      let mode = "pen"; // 'pen' | 'eraser'
+      let drawing = false;
+      let hasInk = false; // <-- prevent prediction on empty canvas
+      const pos = { x: 0, y: 0 };
+
+      function resetCanvas() {
+        ctx.fillStyle = "#000000";  // black background like MNIST
+        ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        hasInk = false;
+      }
+      resetCanvas();
+
+      function setBrush() {
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.lineWidth = brushSize;
+        ctx.strokeStyle = mode === "pen" ? "#ffffff" : "#000000";
+      }
+
+      function pointerXY(e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        return { x: Math.max(0, Math.min(CANVAS_SIZE, x)), y: Math.max(0, Math.min(CANVAS_SIZE, y)) };
+      }
+
+      const startDraw = (e) => {
+        drawing = true;
+        setBrush();
+        const { x, y } = pointerXY(e);
+        pos.x = x; pos.y = y;
+      };
+      const moveDraw = (e) => {
+        if (!drawing) return;
+        const { x, y } = pointerXY(e);
+        ctx.beginPath(); ctx.moveTo(pos.x, pos.y); ctx.lineTo(x, y); ctx.stroke(); pos.x = x; pos.y = y;
+        hasInk = true; // mark canvas as non-empty
+        // (optional live preview) -> if you want, call queuePredict() here
+      };
+      const endDraw = () => { drawing = false; queuePredict(); };
+
+      // Desktop
+      canvas.addEventListener("mousedown", startDraw);
+      canvas.addEventListener("mousemove", moveDraw);
+      window.addEventListener("mouseup", endDraw);
+      // Mobile
+      canvas.addEventListener("touchstart", (e) => { e.preventDefault(); startDraw(e); }, { passive: false });
+      canvas.addEventListener("touchmove", (e) => { e.preventDefault(); moveDraw(e); }, { passive: false });
+      canvas.addEventListener("touchend", endDraw);
+
+      sizeInput.addEventListener("input", () => { brushSize = parseInt(sizeInput.value, 10); sizeVal.textContent = brushSize; });
+      btnPen.addEventListener("click", () => { mode = "pen"; btnPen.classList.add("bg-primary","text-white"); btnEraser.classList.remove("bg-primary","text-white"); });
+      btnEraser.addEventListener("click", () => { mode = "eraser"; btnEraser.classList.add("bg-primary","text-white"); btnPen.classList.remove("bg-primary","text-white"); });
+      btnClear.addEventListener("click", () => {
+        resetCanvas();
+        renderThumb();
+        updateBars(Array(10).fill(0));
+        predEl.textContent = "";
+        confEl.textContent = "";
+        statusEl.textContent = "Draw a digit to start.";
+      });
+
+      // set initial button state
+      btnPen.classList.add("bg-primary","text-white");
+
+      // ---------- Bars setup ----------
+      const bars = [];
+      for (let i = 0; i < 10; i++) {
+        const bar = document.createElement("div");
+        bar.className = "bg-blue-600/80 rounded";
+        bar.style.height = "2px";
+        barsEl.appendChild(bar);
+        bars.push(bar);
+      }
+      function updateBars(probs) {
+        for (let i = 0; i < 10; i++) {
+          const h = Math.max(2, Math.round(probs[i] * 100) * 1.2); // 0–120px
+          bars[i].style.height = h + "px";
+          bars[i].title = `${i}: ${(probs[i]*100).toFixed(1)}%`;
+        }
+      }
+
+      // ---------- Preprocess: canvas → Float32Array(784) ----------
+      function canvasToInput() {
+        // Downscale to 28x28 on an offscreen canvas
+        const tmp = document.createElement("canvas");
+        tmp.width = DIGIT_SIZE; tmp.height = DIGIT_SIZE;
+        const c = tmp.getContext("2d");
+        c.imageSmoothingEnabled = false; // crisper downscale
+        c.drawImage(canvas, 0, 0, DIGIT_SIZE, DIGIT_SIZE);
+        const img = c.getImageData(0, 0, DIGIT_SIZE, DIGIT_SIZE).data;
+
+        // grayscale [0,255] -> normalize to [-1,1]
+        const out = new Float32Array(DIGIT_SIZE * DIGIT_SIZE);
+        for (let i = 0, j = 0; i < img.length; i += 4, j++) {
+          const gray = img[i]; // R channel
+          out[j] = (gray * 2 / 255) - 1;
+        }
+        return out;
+      }
+
+      // 28×28 preview (scaled x2)
+      function renderThumb() {
+        const scale = 2;
+        thumb.width = DIGIT_SIZE * scale;
+        thumb.height = DIGIT_SIZE * scale;
+        tctx.imageSmoothingEnabled = false;
+
+        const tmp = document.createElement("canvas");
+        tmp.width = DIGIT_SIZE; tmp.height = DIGIT_SIZE;
+        const c = tmp.getContext("2d");
+        c.drawImage(canvas, 0, 0, DIGIT_SIZE, DIGIT_SIZE);
+        tctx.fillStyle = "#ffffff"; tctx.fillRect(0,0,thumb.width,thumb.height);
+        tctx.drawImage(tmp, 0, 0, thumb.width, thumb.height);
+      }
+
+      // ---------- Softmax ----------
+      function softmax(logits) {
+        const m = Math.max(...logits);
+        const exps = logits.map(v => Math.exp(v - m));
+        const s = exps.reduce((a,b)=>a+b,0);
+        return exps.map(e => e/s);
+      }
+
+      // ---------- WebGPU / Model loading ----------
+      let device = null;
+      let runner = null; // function to run inference
+      let tinygradModule = null;
+
+      async function getDevice() {
+        if (!navigator.gpu) throw new Error("WebGPU is not supported by this browser.");
+        const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+        if (!adapter) throw new Error("No GPU adapter found.");
+        const needF16 = adapter.features && adapter.features.has("shader-f16") ? ["shader-f16"] : [];
+        return await adapter.requestDevice({ requiredFeatures: needF16 });
+      }
+
+      async function loadModel(name) {
+        try {
+          statusEl.textContent = `Loading model ${name}…`;
+          if (!device) device = await getDevice();
+
+          const jsPath = `./${name}/${name}.js`;
+          const weightsPath = `./${name}/${name}.webgpu.safetensors`;
+          tinygradModule = (await import(jsPath)).default;
+
+          const t0 = performance.now();
+          runner = await tinygradModule.load(device, weightsPath);
+          const t1 = performance.now();
+          timerEl.textContent = `${(t1 - t0).toFixed(1)} ms (compile)`;
+          statusEl.textContent = "Ready for inference.";
+        } catch (e) {
+          statusEl.textContent = "Error: " + e.message;
+          throw e;
+        }
+      }
+
+      modelSelect.addEventListener("change", (e) => loadModel(e.target.value));
+
+      // ---------- Inference (debounced) ----------
+      let predictTimer = null;
+      function queuePredict() {
+        if (!runner || !hasInk) return; // don't predict on empty canvas
+        if (predictTimer) clearTimeout(predictTimer);
+        predictTimer = setTimeout(runOnce, 120); // debounce ~120ms after stroke
+      }
+
+      async function runOnce() {
+        try {
+          const x = canvasToInput();
+          renderThumb();
+
+          const t0 = performance.now();
+          // the exported API usually returns [ Float32Array(logits) ]
+          const out = await runner(x);
+          const t1 = performance.now();
+          timerEl.textContent = `${(t1 - t0).toFixed(1)} ms (inference)`;
+
+          const logits = Array.from(new Float32Array(out[0]));
+          const probs = softmax(logits);
+          const predIdx = probs.indexOf(Math.max(...probs));
+
+          predEl.textContent = predIdx;
+          confEl.textContent = `(${(probs[predIdx] * 100).toFixed(1)}%)`;
+          updateBars(probs);
+          statusEl.textContent = "OK";
+        } catch (e) {
+          statusEl.textContent = "Error: " + e.message;
+        }
+      }
+
+      // ---------- Boot ----------
+      await loadModel(modelSelect.value);
+      renderThumb();
+      updateBars(Array(10).fill(0));
+      predEl.textContent = "";
+      confEl.textContent = "";
+      statusEl.textContent = "Draw a digit to start.";
+    </script>
+  </body>
+</html>

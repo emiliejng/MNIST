@@ -1,0 +1,3 @@
+# Environnements virtuels
+.venv/
+__pycache__/
