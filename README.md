@@ -6,7 +6,7 @@ Live Demo
 <img width="1440" height="900" alt="Capture d’écran 2025-11-05 à 03 41 09" src="https://github.com/user-attachments/assets/5636f329-24e9-4f40-846f-2c46f8e2a597" />
 
 Try the live app on GitHub Pages :
-(Replace this link with your real GitHub Pages URL.)
+https://emiliejng.github.io/MNIST/
 
 
 Overview
