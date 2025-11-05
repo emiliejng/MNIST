@@ -9,7 +9,7 @@ Try the live app on GitHub Pages :
 https://emiliejng.github.io/MNIST/
 
 
-Overview
+##Overview
 
 This project demonstrates how to train deep learning models in Python using Tinygrad, export them, and run them directly inside a WebGPU-based web app.
 
@@ -19,7 +19,7 @@ You can draw a digit on the canvas, and the model instantly predicts the number 
 The main goal is to connect Tinygrad (for training) with WebGPU (for inference) to build a fully functional browser-based AI demo.
 
 
-Features:
+##Features:
 
 - Two trained models:
 MLP (Multi-Layer Perceptron)
@@ -40,60 +40,60 @@ CNN (Convolutional Neural Network)
 - Model selector to switch between MLP and CNN
 
 
-Model Summary: 
+##Model Summary: 
 
 Model Name	Architecture	Accuracy	Training Settings
 mnist_mlp	MLP (3 dense layers)	accuracy:97.89%	LR=0.025, Batch=512, Steps=350
 mnist_convnet	CNN (3 conv + 2 dense layers)	accuracy:98.95%	LR=0.015, Batch=512, Steps=250
 
-More experiment results can be found here : HYPERPARAMETERS.md
+#More experiment results can be found here : HYPERPARAMETERS.md
 
 
-Setup / Local Run:
+##Setup / Local Run:
 
 To test the project locally:
 
-Clone this repository
+- Clone this repository
 
 git clone https://github.com/emiliejng/MNIST.git
 
 
-Start a local server
+- Start a local server
 
 WebGPU requires an HTTP server (not file://):
 
 python -m http.server
 
-Open in your browser
+- Open in your browser
 
 http://localhost:8000
 
-Make sure WebGPU is enabled (see below for Safari setup).
+- Make sure WebGPU is enabled (see below for Safari setup).
 
 
-Enabling WebGPU on Safari (Mac)
+##Enabling WebGPU on Safari (Mac)
 
-Install Safari Technology Preview → Download here
+- Install Safari Technology Preview → Download here
 
-Go to Preferences → Advanced → Show Develop menu
+- Go to Preferences → Advanced → Show Develop menu
 
-In the Develop menu, go to Experimental Features → enable WebGPU
+- In the Develop menu, go to Experimental Features → enable WebGPU
 
-Reload your app at http://localhost:8000
+- Reload your app at http://localhost:8000
 
-On Chrome: go to chrome://flags/#enable-unsafe-webgpu → Enable → Relaunch
+##On Chrome: go to chrome://flags/#enable-unsafe-webgpu → Enable → Relaunch
 
 
-Hyperparameter Log
+##Hyperparameter Log
 
 All training experiments, configurations, and accuracies are recorded in
 
-👉 HYPERPARAMETERS.md :
+HYPERPARAMETERS.md :
 
 https://github.com/emiliejng/MNIST/blob/main/HYPERPARAMETERS.md
 
 
-Summary
+##Summary
 
 This project connects Tinygrad training with WebGPU inference in a single page web app.
 It proves that deep learning models can run fully on the browser GPU without external servers.
