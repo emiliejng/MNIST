@@ -42,9 +42,9 @@ CNN (Convolutional Neural Network)
 
 ## Model Summary: 
 
-Model Name	Architecture	Accuracy	Training Settings
-mnist_mlp	MLP (3 dense layers)	accuracy:97.89%	LR=0.025, Batch=512, Steps=350
-mnist_convnet	CNN (3 conv + 2 dense layers)	accuracy:98.95%	LR=0.015, Batch=512, Steps=250
+- mnist_mlp	MLP:	accuracy=97.89%	LR=0.025, Batch=512, Steps=350
+
+- mnist_convnet	CNN: accuracy=98.95%	LR=0.015, Batch=512, Steps=250
 
 
 ## Setup / Local Run:
