@@ -1,15 +1,10 @@
-* **Project Title & Screenshot:** Clear heading and a visual of your running app.
-  * **Live Demo Link:** **CRUCIAL:** A single, easy-to-find link to your GitHub Pages URL.
-  * **Overview:** A paragraph explaining the project, mentioning **tinygrad** and **WebGPU**.
-  * **Features:** A bulleted list of all implemented features.
-  * **Model Summary:** A small table showing the architecture and accuracy of your best MLP and CNN.
-  * **Setup/Local Run:** Instructions for local setup and testing.
-  * **Link to Hyperparameter Log:** Explicitly link to the `HYPERPARAMETERS.md` file.
-
 Digit Classifier — Tinygrad + WebGPU
 
 
 Live Demo
+
+<img width="1440" height="900" alt="Capture d’écran 2025-11-05 à 03 41 09" src="https://github.com/user-attachments/assets/5636f329-24e9-4f40-846f-2c46f8e2a597" />
+
 Try the live app on GitHub Pages :
 (Replace this link with your real GitHub Pages URL.)
 
@@ -48,8 +43,8 @@ CNN (Convolutional Neural Network)
 Model Summary: 
 
 Model Name	Architecture	Accuracy	Training Settings
-mnist_mlp	MLP (3 dense layers)	~95%	LR=0.02, Batch=512, Steps=200
-mnist_convnet	CNN (3 conv + 2 dense layers)	~98%	LR=0.01, Batch=256, Steps=300
+mnist_mlp	MLP (3 dense layers)	accuracy:97.89%	LR=0.025, Batch=512, Steps=350
+mnist_convnet	CNN (3 conv + 2 dense layers)	accuracy:98.95%	LR=0.015, Batch=512, Steps=250
 
 More experiment results can be found here : HYPERPARAMETERS.md
 
@@ -82,7 +77,8 @@ On Chrome: go to chrome://flags/#enable-unsafe-webgpu → Enable → Relaunch
 
 Hyperparameter Log
 All training experiments, configurations, and accuracies are recorded in
-👉 HYPERPARAMETERS.md
+👉 HYPERPARAMETERS.md :
+https://github.com/emiliejng/MNIST/blob/main/HYPERPARAMETERS.md
 
 
 Summary
