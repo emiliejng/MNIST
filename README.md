@@ -46,8 +46,6 @@ Model Name	Architecture	Accuracy	Training Settings
 mnist_mlp	MLP (3 dense layers)	accuracy:97.89%	LR=0.025, Batch=512, Steps=350
 mnist_convnet	CNN (3 conv + 2 dense layers)	accuracy:98.95%	LR=0.015, Batch=512, Steps=250
 
-### More experiment results can be found here : HYPERPARAMETERS.md
-
 
 ## Setup / Local Run:
 
@@ -88,9 +86,7 @@ http://localhost:8000
 
 ## Hyperparameter Log: 
 
-All training experiments, configurations, and accuracies are recorded in
-
-### HYPERPARAMETERS.md :
+All training experiments, configurations, and accuracies are recorded in HYPERPARAMETERS.md :
 
 https://github.com/emiliejng/MNIST/blob/main/HYPERPARAMETERS.md
 
