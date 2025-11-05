@@ -81,7 +81,9 @@ http://localhost:8000
 
 - Reload your app at http://localhost:8000
 
-### On Chrome: go to chrome://flags/#enable-unsafe-webgpu → Enable → Relaunch
+### On Chrome: 
+
+- go to chrome://flags/#enable-unsafe-webgpu → Enable → Relaunch
 
 
 ## Hyperparameter Log: 
